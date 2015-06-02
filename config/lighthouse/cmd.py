@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python
 
 import sys
 import random
@@ -16,7 +16,7 @@ MAX_OUTPUT = 100 * 1024
 resultStr = Array(c_char, MAX_OUTPUT);
 
 def clear_output():
-  resultStr.value = json.dumps([])
+  resultStr.value = json.dumps([]).encode('utf-8')
 
 def sanitize_output(string):
   string = string.replace("{", "\{")
@@ -31,46 +31,46 @@ def create_result(title, action):
 def append_output(title, action):
   title = sanitize_output(title)
   action = sanitize_output(action)
-  results = json.loads(resultStr.value)
+  results = json.loads(resultStr.value.decode('utf-8'))
   if len(results) < 2:
     results.append(create_result(title, action))
   else: # ignore the bottom two default options
     results.insert(-2, create_result(title, action))
-  resultStr.value = json.dumps(results)
+  resultStr.value = json.dumps(results).encode('utf-8')
 
 def prepend_output(title, action):
   title = sanitize_output(title)
   action = sanitize_output(action)
-  results = json.loads(resultStr.value)
+  results = json.loads(resultStr.value.decode('utf-8'))
   results = [create_result(title, action)] + results
-  resultStr.value = json.dumps(results)
+  resultStr.value = json.dumps(results).encode('utf-8')
 
 def update_output():
-  results = json.loads(resultStr.value)
-  print "".join(results)
+  results = json.loads(resultStr.value.decode('utf-8'))
+  print("".join(results))
   sys.stdout.flush()
-  
+
 google_thr = None
 def google(query):
   sleep(.5) # so we aren't querying EVERYTHING we type
   g = pygoogle(userInput, log_level=logging.CRITICAL)
   g.pages = 1
   out = g.get_urls()
-  if (len(out) >= 1):  
+  if (len(out) >= 1):
     append_output(out[0], "xdg-open " + out[0])
     update_output()
-  
+
 find_thr = None
 def find(query):
   sleep(.5) # Don't be too aggressive...
   try:
-    find_out = str(subprocess.check_output(["find", os.path.expanduser("~"), "-name", query]))
+    find_out = subprocess.check_output(["find", os.path.expanduser("~"), "-maxdepth", "4", "-name", query]).decode('utf-8')
   except subprocess.CalledProcessError as e:
     find_out = str(e.output)
   find_array = find_out.split("\n")[:-1]
   if (len(find_array) == 0): return
-  for i in xrange(min(5, len(find_array))):
-    append_output(str(find_array[i]),"urxvt -e bash -c 'if [[ $(file "+find_array[i]+" | grep text) != \"\" ]]; then vim "+find_array[i]+"; else cd $(dirname "+find_array[i]+"); bash; fi;'");
+  for i in range(min(5, len(find_array))):
+    append_output(find_array[i],"urxvt -e zsh -c 'if [[ $(file "+find_array[i]+" | grep text) != \"\" ]]; then nvim "+find_array[i]+"; else cd $(dirname "+find_array[i]+"); zsh; fi;'");
   update_output()
 
 def get_process_output(process, formatting, action):
@@ -144,7 +144,7 @@ def get_xdg_cmd(cmd):
 
 special = {
     "bat": (lambda x: get_process_output("acpi", "%s", "")),
-    "vi": (lambda x: ("vim","urxvt -e vim")),
+    "vi": (lambda x: ("nvim","urxvt -e nvim")),
 }
 
 while 1:
@@ -165,10 +165,17 @@ while 1:
         update_output()
         continue
 
+    # Could be a command...
+    append_output("execute '"+userInput+"'", userInput)
+
+    # Could be bash...
+    append_output("run '%s' in a shell" % (userInput),
+                  "urxvt -e %s" % (userInput))
+
     try:
         complete = subprocess.check_output("compgen -c %s" % (userInput),
                                                shell=True, executable="/bin/bash")
-        complete = complete.split('\n')
+        complete = complete.decode('utf-8').split('\n')
 
         for cmd_num in range(min(len(complete), 5)):
                 # Look for XDG applications of the given name.
@@ -189,13 +196,6 @@ while 1:
                 if out is not None:
                     prepend_output(*out)
 
-        # Could be a command...
-        append_output("execute '"+userInput+"'", userInput)
-
-        # Could be bash...
-        append_output("run '%s' in a shell" % (userInput),
-                      "terminator -e %s" % (userInput))
-
         # Is this python?
         try:
             out = eval(userInput)
@@ -203,14 +203,14 @@ while 1:
                 pass  # We don't want gibberish type stuff
             else:
                 prepend_output("python: "+str(out),
-                            "terminator -e python2.7 -i -c 'print "+userInput+"'")
+                            "urxvt -e python -i -c 'print("+userInput+"')")
         except Exception as e:
             pass
 
         # Spawn worker threads
-        google_thr = Process(target=google, args=(userInput,))
-        google_thr.start()
         find_thr = Process(target=find, args=(userInput,))
         find_thr.start()
+        google_thr = Process(target=google, args=(userInput,))
+        google_thr.start()
 
         update_output()
