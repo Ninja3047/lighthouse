@@ -70,7 +70,7 @@ def find(query):
   find_array = find_out.split("\n")[:-1]
   if (len(find_array) == 0): return
   for i in range(min(5, len(find_array))):
-    append_output(find_array[i],"urxvt -e zsh -c 'if [[ $(file "+find_array[i]+" | grep text) != \"\" ]]; then nvim "+find_array[i]+"; else cd $(dirname "+find_array[i]+"); zsh; fi;'");
+    append_output(find_array[i],"urxvt -e zsh -c 'if [[ $(file "+find_array[i]+" | grep text) != \"\" ]]; then nvim "+find_array[i]+"; else cd "+find_array[i]+"; zsh; fi;'");
   update_output()
 
 def get_process_output(process, formatting, action):
