@@ -4,7 +4,7 @@ import sys
 import random
 from time import sleep
 import logging
-from google import pygoogle
+import duckduckgo
 from multiprocessing import Process, Value, Manager, Array
 from ctypes import c_char, c_char_p
 import subprocess
@@ -50,14 +50,18 @@ def update_output():
   print("".join(results))
   sys.stdout.flush()
 
-google_thr = None
-def google(query):
+ddg_thr = None
+def ddg(query):
   sleep(.5) # so we aren't querying EVERYTHING we type
-  g = pygoogle(userInput, log_level=logging.CRITICAL)
-  g.pages = 1
-  out = g.get_urls()
-  if (len(out) >= 1):
-    append_output(out[0], "xdg-open " + out[0])
+  d = duckduckgo.get_zci(query)
+  if len(d['text']) > 0 and len(d['url']) > 0:
+    append_output(d['text'], "xdg-open " + d['url'])
+    update_output()
+  elif len(d['text']) > 0:
+    append_output(d['text'], '')
+    update_output()
+  elif len(d['url']) > 0:
+    append_output(d['url'], "xdg-open " + d['url'])
     update_output()
 
 find_thr = None
@@ -155,8 +159,8 @@ while 1:
     clear_output()
 
     # Kill previous worker threads
-    if google_thr is not None:
-        google_thr.terminate()
+    if ddg_thr is not None:
+        ddg_thr.terminate()
     if find_thr is not None:
         find_thr.terminate()
 
@@ -210,7 +214,7 @@ while 1:
         # Spawn worker threads
         find_thr = Process(target=find, args=(userInput,))
         find_thr.start()
-        google_thr = Process(target=google, args=(userInput,))
-        google_thr.start()
+        ddg_thr = Process(target=ddg, args=(userInput,))
+        ddg_thr.start()
 
         update_output()
