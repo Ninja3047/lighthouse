@@ -71,20 +71,43 @@ generate the results.  A selected result (move with arrow keys to highlight
 and then hit enter to select) will then have its `action`
 printed to standard out (and in the case above, into the shell).
 
+# Passing arguments to cmd
+
+Lighthouse will pass any unrecognized arguments it gets on to the cmd handler.
+The preferred way to pass arguments for your cmd handler to lighthouse is like this:
+
+    lighthouse -- some-cmd-argument --some-cmd-option | sh
+
+Using the GNU standard '--' to tell Lighthouse not to attempt to parse arguments beyond that point.
+This is important, as it prevents Lighthouse from seeing `--some-cmd-option`,
+attempting to recognize it as a lighthouse option,
+and failing. It also means you can reuse option characters used by lighthouse for your cmd handler
+(eg. '-c'), if you need to.
+
 Syntax
 ---
 The syntax of a result is simple.
-`{ title | action }`
+`{ title | action }`or `{ title | action | description }`
 The `title` is displayed in the results and the `action` is written to standard out
 when that result is selected.  A common use case would therefore be
 `lighthouse | sh` and `action` would be some shell command.  Run `make config` and then
 `lighthouse | sh` to see this in action.  The `title` will be `look! [input]` and the
 `action` will be `[input]`, so you've effectively created a small one time shell prompt.
+The description is a text displayed according to the highlighted selection.
 To create multiple results simply chain them together: `{ title1 | action1 }{ title2 | action2 }`
 
-There is also image support in the form `{ %Ifile.png% <- an image! | feh file.png }`.
+* There is also image support in the form `{ %Ifile.png% <- an image! | feh file.png }`.
 To use `%` as a character, escape it with `\%`.
-Currently only PNG images are supported.
+Currently only PNG images are supported if the program is compiled without GDK
+support.
+
+* To go to the next line (in description window) use `%N`
+
+* To draw a line in the description window (to separate it) `%L`
+
+* To format your text in bold use `%B text... %`
+
+* To center text/image `%C ... %`
 
 Other ways to use lighthouse
 ---
@@ -106,6 +129,10 @@ Options
 The `-c` command line flag will allow you to set a custom location for the configurations file.
 An example would be `lighthouse -c ~/lighthouserc2`.
 
+If passing additional arguments to the cmd handler (see 'Passing arguments to cmd' above),
+all options to lighthouse should come before the `--`.
+For example `lighthouse -c ~/lighthouserc2 -- some arguments for cmd handler`
+
 Configuration file
 ---
 Check out the sample `lighthouserc` in `config/lighthouse`.  Copy it to your directory by
@@ -114,6 +141,7 @@ running `make config`.
 List of settings you can set in the configuration file:
 - `font_name`
 - `font_size`
+- `desc_font_size`
 - `horiz_padding`
 - `cursor_padding`
 - `height`
@@ -127,6 +155,10 @@ List of settings you can set in the configuration file:
 - `cmd`
 - `query_fg`, `query_bg`, `result_fg`, `result_bg`, `hightlight_fg`, `highlight_bg`
 - `dock_mode` (i3 users must set it to 0)
+- `desc_size` (size in pixel of the description window)
+- `auto_center` (if set to 1, it center the window when the description is not
+  expanded)
+- `line_gap` (gap in the description window drawed with %N)
 
 TODO
 ---
